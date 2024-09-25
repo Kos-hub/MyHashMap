@@ -1,9 +1,19 @@
 #pragma once
+#include <algorithm>
 #include <cstddef>
 #include <type_traits>
 #include <typeinfo>
 #include <stdio.h>
 #include <string>
+
+template<class V>
+struct Node
+{
+    std::string key;
+    V value;
+    next *Bucket
+
+};
 template <class K, class V> class MyHashMap
 {
 public:
@@ -13,11 +23,14 @@ public:
     void Add(K key, V value);
     V Get(K key);
 private:
-    V* _values;
+    V* values;
     int size = 5;
+    int currSize = 0;
+    int capacity = 3;
 
 
     int HashValue(K key);
+    int Rehash();
 
 };
 
@@ -25,14 +38,14 @@ template <class K, class V>
 MyHashMap<K, V>::MyHashMap()
 {
     printf("Creating MyHashMap... with type %s and %s\n", typeid(K).name(), typeid(V).name());
-    _values = new V[size]{};
+    values = new V[size]{};
 }
 
 template <class K, class V> 
 MyHashMap<K, V>::~MyHashMap()
 {
     printf("Deleting MyHashMap... with type %s and %s\n", typeid(K).name(), typeid(V).name());
-    delete[] _values;
+    delete[] values;
 }
 
 
@@ -47,11 +60,26 @@ void MyHashMap<K, V>::Add(K key, V value)
 
     if (index >= 0 && index < size)
     {
-        _values[index] = value;
+        values[index] = value;
+        currSize++;
     }
     else
     {
         printf("Calculated index is out of bounds\n");
+    }
+
+    if (currSize >= 2)
+    {
+        printf("Capacity has been reached. Reallocating...\n");
+        size += 3;
+        int* newValues = new int[size];
+        capacity = size - 2;
+        std::copy(values, values + (size - 3), newValues);
+
+        delete[] values;
+
+        values = newValues;
+        printf("New capacity is: %i\n", capacity);
     }
 }
 
@@ -62,7 +90,7 @@ V MyHashMap<K, V>::Get(K key)
 
     if (index >= 0 && index < size)
     {
-        return _values[index];
+        return values[index];
     }
     else
     {
@@ -94,6 +122,16 @@ int MyHashMap<K, V>::HashValue(K key)
         hashVal += c;
     }
 
-    printf("Hashed value is: %i\n", hashVal % 5);
-    return hashVal % 5;
+    printf("Hashed value is: %i\n", hashVal % size);
+    return hashVal % size;
+}
+
+template<class K, class V>
+int MyHashMap<K, V>::Rehash()
+{
+    for (int i = 0; i < size; i++)
+    {
+
+    }
+
 }

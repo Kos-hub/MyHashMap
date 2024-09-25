@@ -1,19 +1,18 @@
 #pragma once
-#include <algorithm>
-#include <cstddef>
 #include <type_traits>
 #include <typeinfo>
 #include <stdio.h>
 #include <string>
 
-template<class V>
+template<class K, class V>
 struct Node
 {
-    std::string key;
+    K key;
     V value;
-    next *Bucket
-
+    Node* next;
+    bool init = false;
 };
+
 template <class K, class V> class MyHashMap
 {
 public:
@@ -23,22 +22,30 @@ public:
     void Add(K key, V value);
     V Get(K key);
 private:
-    V* values;
-    int size = 5;
+    Node<K, V>* values;
+
+    int* sizes;
+    int sizeIdx = 2;
+
+    int capacity;
     int currSize = 0;
-    int capacity = 3;
 
 
     int HashValue(K key);
     int Rehash();
 
+    void GenerateSizes();
 };
 
 template <class K, class V>
 MyHashMap<K, V>::MyHashMap()
 {
     printf("Creating MyHashMap... with type %s and %s\n", typeid(K).name(), typeid(V).name());
-    values = new V[size]{};
+    sizes = new int[10];
+    GenerateSizes();
+
+    values = new Node<K, V>[sizes[sizeIdx]]{};
+    capacity = sizes[sizeIdx] - 2; 
 }
 
 template <class K, class V> 
@@ -46,21 +53,28 @@ MyHashMap<K, V>::~MyHashMap()
 {
     printf("Deleting MyHashMap... with type %s and %s\n", typeid(K).name(), typeid(V).name());
     delete[] values;
+    delete[] sizes;
 }
 
 
 template <class K, class V>
 void MyHashMap<K, V>::Add(K key, V value)
 {
-    printf("Adding values...\n");
-
+    // Hash the key first. We need to know if it's a collision or not
     int index = HashValue(key);
 
-    printf("Calculated Index is: %i\n", index);
+    Node<K, V> node = Node<K, V>{key, value, nullptr, true};
 
-    if (index >= 0 && index < size)
+    if (values[index].init)
     {
-        values[index] = value;
+        values[index].next = node.next;
+
+        return;
+    }
+
+    if (index >= 0 && index < sizes[sizeIdx])
+    {
+        values[index] = node;
         currSize++;
     }
     else
@@ -68,13 +82,15 @@ void MyHashMap<K, V>::Add(K key, V value)
         printf("Calculated index is out of bounds\n");
     }
 
-    if (currSize >= 2)
+    if (currSize >= capacity)
     {
         printf("Capacity has been reached. Reallocating...\n");
-        size += 3;
-        int* newValues = new int[size];
-        capacity = size - 2;
-        std::copy(values, values + (size - 3), newValues);
+
+        sizeIdx++;
+        Node<K, V>* newValues = new Node<K, V>[sizeIdx];
+        capacity = sizes[sizeIdx] - 2;
+
+        std::copy(values, values + sizes[sizeIdx - 1], newValues);
 
         delete[] values;
 
@@ -88,20 +104,21 @@ V MyHashMap<K, V>::Get(K key)
 {
     int index = HashValue(key);
 
-    if (index >= 0 && index < size)
+    if (index >= 0 && index < sizes[sizeIdx])
     {
-        return values[index];
+        return values[index].value;
     }
     else
     {
         printf("Index out of bounds\n");
-        return NULL;
+        return V{};
     }
 }
 
 template <class K, class V>
 int MyHashMap<K, V>::HashValue(K key)
 {
+
     std::string keyStr;
     if constexpr (std::is_arithmetic<K>::value)
     {
@@ -116,22 +133,56 @@ int MyHashMap<K, V>::HashValue(K key)
         printf("Unsupported conversion");
     }
 
-    int hashVal = 0;
-    for(const auto& c: keyStr)
+    unsigned long hash = 5381;
+    for (const char& c : keyStr)
     {
-        hashVal += c;
+        hash = ((hash << 5) + hash) + c;
     }
 
-    printf("Hashed value is: %i\n", hashVal % size);
-    return hashVal % size;
+    return hash % sizes[sizeIdx];
 }
+
 
 template<class K, class V>
 int MyHashMap<K, V>::Rehash()
 {
-    for (int i = 0; i < size; i++)
-    {
 
+    return 0;
+}
+
+template<class K, class V>
+void MyHashMap<K, V>::GenerateSizes()
+{
+    bool* isComposite = new bool[31]{};
+
+    for (int i = 2; i*i <= 31; i++)
+    {
+        bool current = isComposite[i];
+
+        if (current)
+        {
+            continue;
+        }
+
+        for (int j = i * i; j <= 31; j += i)
+        {
+            isComposite[j] = true;
+        }
+    }
+
+
+    int idx = 0;
+    for (int i = 2; i <= 31; i++)
+    {
+        if (!isComposite[i])
+        {
+            if (idx >= 0 && idx < 10)
+            {
+                sizes[idx] = i;
+                idx++;
+            }
+        }
     }
 
 }
+
